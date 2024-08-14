@@ -8,6 +8,7 @@ This project, supported by the European Climate Pact Secretariat of the European
 ## Repository Structure
 Below is the structure of this repository, which includes both data and scripts used in the analysis of the environmental impact of travel to the concerts.
 
+```
 ADELE-IN-MUNICH-AUDIENCE-TRAVEL
 │
 ├── data
@@ -33,7 +34,7 @@ ADELE-IN-MUNICH-AUDIENCE-TRAVEL
 │
 ├── .gitignore
 └── README.md
-
+```
 
 ## Licensing
 - **Data:** The data files in the `data/` directory are licensed under the [Datenlizenz Deutschland – Namensnennung – Version 2.0 (DL-DE-BY-2.0)](https://www.govdata.de/dl-de/by-2-0). Please refer to the `LICENSE` file in the `data/` directory for more details.
