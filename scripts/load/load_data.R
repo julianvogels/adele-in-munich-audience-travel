@@ -1,17 +1,25 @@
 # Function to load and process data with weights
 load_and_process_data <- function(file_path, location, weights = NULL) {
+  # Load data
   data <- read_csv(file_path) %>%
     mutate(Location = location)
-
+  
+  # Join with weights if provided
   if (!is.null(weights)) {
     data <- data %>%
-      left_join(weights, by = c("Destination name" = "name")) %>%
-      mutate(weighted_distance = `Total distance (round trip, km)` * weight)
+      left_join(weights, by = c("Survey name" = "name")) %>%
+      mutate(weighted_distance = ifelse(is.na(weight), 0, weight) * `Distance (single journey, km)`)
   } else {
     data <- data %>%
-      mutate(weighted_distance = `Total distance (round trip, km)`)
+      mutate(weighted_distance = `Distance (single journey, km)`)
   }
-
+  
+  # Ensure there are no NA values in critical columns after weighting
+  data <- data %>%
+    filter(!is.na(`weighted_distance`)) %>%
+    filter(!is.na(`Means of transportation`)) %>%
+    filter(!is.na(`Distance (single journey, km)`))
+  
   return(data)
 }
 
@@ -32,7 +40,7 @@ concert_total_audience <- (concert_9_aug_pop + concert_10_aug_pop)
 concert_9_aug_weight <- concert_9_aug_pop / concert_total_audience
 concert_10_aug_weight <- concert_10_aug_pop / concert_total_audience
 
-# List of file paths and corresponding locations with weights for Feel Festival
+# List of file paths and corresponding locations with weights for the Adele concert
 files_and_metadata <- list(
   list(
     file_path = "data/2024-08-11-adele-2024-Publikumsumfrage-v1-4-0.csv",
@@ -59,6 +67,9 @@ files_and_metadata <- list(
 all_data <- bind_rows(lapply(files_and_metadata, function(fl) {
   load_and_process_data(fl$file_path, fl$location, fl$weights)
 }))
+
+print(dim(all_data))  # Print dimensions of the data
+print(head(all_data))  # Inspect the first few rows to ensure data integrity
 
 # Save the loaded data to an RDS file
 saveRDS(all_data, file = "output/all_data.rds")
