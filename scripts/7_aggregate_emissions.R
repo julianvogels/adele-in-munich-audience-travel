@@ -12,14 +12,15 @@ all_data <- readRDS("output/all_data.rds")
 # Define the total audience size
 total_audience_size <- 750000  # Total number of visitors to the Adele concert series
 
-# Function to calculate aggregate emissions and sample size
+# Function to calculate aggregate emissions and sample size with weights
 calculate_aggregate_emissions <- function(data) {
   # Count the unique Participant Identifiers
   sample_size <- n_distinct(data$`Participant Identifier`)
   
-  # Aggregate total emissions for the sample
+  # Aggregate total emissions for the sample, applying weights
   total_emissions_sample <- data %>%
-    summarize(Total_Emissions_Sample = sum(`Total emissions (round trip, kg CO2e)`, na.rm = TRUE))
+    mutate(Weighted_Emissions = `Emissions (single journey, kg CO2e)` * 2 * weight) %>%
+    summarize(Total_Emissions_Sample = sum(Weighted_Emissions, na.rm = TRUE))
   
   return(list(total_emissions_sample = total_emissions_sample, sample_size = sample_size))
 }

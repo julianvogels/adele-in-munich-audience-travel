@@ -5,13 +5,13 @@ all_data <- readRDS("output/all_data.rds")
 unique_transport_modes <- unique(all_data$`Means of transportation`)
 
 # Generate transport group colors dynamically based on present groups
-transport_colors <- get_transport_colors(unique_transport_modes)
+transport_colors <- get_transport_colors(c(unique_transport_modes, "Other"))  # Include "Other" in the colors
 
-# Function to process modal split data using single journey distance
+# Function to process modal split data using single journey distance and weights
 process_modal_split_data <- function(data) {
   modal_split_data <- data %>%
     group_by(Location, `Means of transportation`) %>%
-    summarize(Total_Distance = sum(`Distance (single journey, km)`, na.rm = TRUE), .groups = 'drop') %>%
+    summarize(Total_Distance = sum(weighted_distance, na.rm = TRUE), .groups = 'drop') %>%
     ungroup() %>%
     group_by(Location) %>%
     mutate(Total_Distance_All = sum(Total_Distance)) %>%
@@ -20,6 +20,13 @@ process_modal_split_data <- function(data) {
     select(-Total_Distance_All) %>%
     mutate(`Means of transportation` = sapply(`Means of transportation`, map_transport_mode)) # Apply custom labels
   
+  # Combine categories with <1% into "Other"
+  modal_split_data <- modal_split_data %>%
+    mutate(`Means of transportation` = ifelse(Percentage < 1, "Other", `Means of transportation`)) %>%
+    group_by(Location, `Means of transportation`) %>%
+    summarize(Percentage = sum(Percentage), .groups = 'drop') %>%
+    ungroup()
+
   return(modal_split_data)
 }
 
@@ -36,7 +43,7 @@ modal_split_data <- modal_split_data %>%
                                               pull(`Means of transportation`)))
 
 # Filter out any labels with Percentage <= 1%
-modal_split_data_filtered <- modal_split_data %>% filter(Percentage > 1)
+modal_split_data_filtered <- modal_split_data %>% filter(Percentage > 1 | `Means of transportation` == "Other")
 
 # Plot modal split comparison using facets
 plot <- ggplot(modal_split_data, aes(x = "", y = Percentage, fill = `Means of transportation`)) +
@@ -65,5 +72,5 @@ plot <- ggplot(modal_split_data, aes(x = "", y = Percentage, fill = `Means of tr
                    segment.color = 'grey50')
 
 # Save and print the plot
-ggsave("output/modal_split_plot.png", plot, width = 10, height = 6)
+ggsave("output/modal_split_transport_performance_with_other.png", plot, width = 10, height = 6)
 print(plot)

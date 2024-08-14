@@ -33,12 +33,12 @@ process_transport_data <- function(data, n_buckets = 50) {
   # Determine the main means of transportation
   main_transport <- determine_main_transport(data)
   
-  # Bucketize the total distance
+  # Bucketize the single journey distance
   main_transport <- main_transport %>%
-    left_join(data %>% select(`Participant Identifier`, `Total distance (round trip, km)`), by = "Participant Identifier") %>%
-    mutate(Distance_Bucket = bucketize_distance(`Total distance (round trip, km)`, n_buckets))
+    left_join(data %>% select(`Participant Identifier`, `Distance (single journey, km)`, weight), by = "Participant Identifier") %>%
+    mutate(Distance_Bucket = bucketize_distance(`Distance (single journey, km)`, n_buckets))
   
-  # Check for NAs in Distance_Bucket and Transport_Group
+  # Filter out any NAs in Distance_Bucket and ensure only main transport modes are kept
   main_transport <- main_transport %>%
     filter(!is.na(Distance_Bucket)) %>%
     mutate(Transport_Group = sapply(`Means of transportation`, group_transport_modes)) %>%
@@ -87,7 +87,10 @@ plot <- ggplot(transport_counts, aes(x = Distance_Bucket, y = Count, color = Tra
        y = "Number of Participants",
        color = "Transport Group") +
   custom_theme +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Angle the x-axis labels for better readability
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = c(0.7, 0.7),  # Position the legend inside the plot (top-right corner)
+        legend.background = element_rect(fill = "white", color = "black", size = 0.5),  # Add background to the legend
+        legend.key = element_blank())  # Remove legend key box
 
 # Add vertical line and annotation only if a crossover is found and within the plot range
 if (nrow(crossover_bucket) > 0 && !is.na(crossover_distance)) {

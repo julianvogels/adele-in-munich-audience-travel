@@ -1,15 +1,15 @@
-# Function to process allocation data
+# Function to process allocation data with weights
 process_allocation_data <- function(data) {
   allocation_data <- data %>%
     filter(`Itinerary index` == 1) %>%
     filter(!is.na(Allocation)) %>%
     group_by(Location, Allocation) %>%
-    summarize(Count = n()) %>%
+    summarize(WeightedCount = sum(weight, na.rm = TRUE)) %>%
     ungroup() %>%
     group_by(Location) %>%
     mutate(
-      Percentallocation = Count / sum(Count) * 100,
-      TotalCount = sum(Count)
+      Percentallocation = WeightedCount / sum(WeightedCount) * 100,
+      TotalCount = sum(WeightedCount)
     ) %>%
     ungroup()
 
@@ -25,7 +25,7 @@ process_allocation_data <- function(data) {
   return(allocation_data)
 }
 
-# Process allocation data
+# Process allocation data with weights
 allocation_data <- process_allocation_data(all_data)
 
 # Plot allocation distribution using facets
