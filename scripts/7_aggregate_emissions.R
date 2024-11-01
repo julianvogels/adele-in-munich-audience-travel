@@ -1,74 +1,103 @@
-# Load necessary libraries
-if (!requireNamespace("tidyverse", quietly = TRUE)) {
-  install.packages("tidyverse")
-}
-
-library(dplyr)
-library(readr)
-
-# Load the data from the RDS file
+# Load the data
 all_data <- readRDS("output/all_data.rds")
 
-# Define the total audience size
-total_audience_size <- 750000  # Total number of visitors to the Adele concert series
+# Define constants
+total_audience_size <- population # Total number of visitors
+cost_per_ton_co2e <- 860 # Externalized cost in EUR per ton of CO2e as per Umweltbundesamt
+allocation_factor <- 0.912 * 1 + 0.078 * 0.5 + 0.01 * 0 # Based on allocation survey data (91,% for full emissions, 7,8% for half emissions, 1% for no emissions)
 
-# Function to calculate aggregate emissions and sample size with weights
-calculate_aggregate_emissions <- function(data) {
-  # Count the unique Participant Identifiers
+# Function to calculate total emissions, total kilometers, sample size, and single trip distance
+calculate_aggregates <- function(data, allocation_factor = 1) {
+  # Filter out invalid or missing data for emissions and distances
+  data <- data %>%
+    filter(
+      !is.na(`Itinerary Emissions (single journey, kg CO2e)`),
+      !is.na(`Itinerary Distance (single journey, km)`)
+    )
+
+  # Apply allocation factor for flights only
+  data <- data %>%
+    mutate(Adjusted_Emissions = ifelse(`Itinerary Means of transportation` == "flight",
+      `Itinerary Emissions (single journey, kg CO2e)` * allocation_factor,
+      `Itinerary Emissions (single journey, kg CO2e)`
+    ))
+
+  # Count unique participants
   sample_size <- n_distinct(data$`Participant Identifier`)
-  
-  # Aggregate total emissions for the sample, applying weights
+
+  # Calculate total roundtrip emissions (weighted and multiplied by 2 for roundtrip)
   total_emissions_sample <- data %>%
-    mutate(Weighted_Emissions = `Emissions (single journey, kg CO2e)` * 2 * weight) %>%
-    summarize(Total_Emissions_Sample = sum(Weighted_Emissions, na.rm = TRUE))
-  
-  return(list(total_emissions_sample = total_emissions_sample, sample_size = sample_size))
+    mutate(Roundtrip_Emissions = Adjusted_Emissions * 2 * weight) %>%
+    summarize(Total_Emissions_Sample = sum(Roundtrip_Emissions, na.rm = TRUE)) %>%
+    pull(Total_Emissions_Sample)
+
+  # Calculate total roundtrip kilometers (weighted and multiplied by 2 for roundtrip)
+  total_km_sample <- data %>%
+    mutate(Roundtrip_Km = weighted_distance * 2) %>%
+    summarize(Total_Km_Sample = sum(Roundtrip_Km, na.rm = TRUE)) %>%
+    pull(Total_Km_Sample)
+
+  return(list(
+    total_emissions_sample = total_emissions_sample,
+    total_km_sample = total_km_sample,
+    sample_size = sample_size
+  ))
 }
 
-# Function to extrapolate total emissions
-extrapolate_total_emissions <- function(aggregate_emissions_sample, sample_size, total_audience_size) {
-  # Calculate the scaling factor
-  scaling_factor <- total_audience_size / sample_size
-  
-  # Extrapolate total emissions
-  total_emissions <- aggregate_emissions_sample$Total_Emissions_Sample * scaling_factor
-  
-  return(total_emissions)
+# Function to calculate emissions per person and per kilometer
+calculate_average_emissions <- function(total_emissions, sample_size, total_km) {
+  # Average emissions per person (kg CO2e)
+  avg_emissions_per_person <- total_emissions / sample_size
+
+  # Emissions per kilometer (kg CO2e)
+  emissions_per_km <- total_emissions / total_km
+
+  return(list(
+    avg_emissions_per_person = avg_emissions_per_person,
+    emissions_per_km = emissions_per_km
+  ))
 }
 
-# Function to calculate the average emissions per person
-calculate_average_emissions_per_person <- function(total_emissions, total_audience_size) {
-  average_emissions_per_person <- total_emissions / total_audience_size
-  return(average_emissions_per_person)
+# Function to extrapolate total emissions to the audience size
+extrapolate_total_emissions <- function(avg_emissions_per_person, total_audience_size) {
+  total_emissions_extrapolated <- avg_emissions_per_person * total_audience_size
+  return(total_emissions_extrapolated)
 }
 
-# Step 1: Calculate the aggregate emissions and sample size
-result <- calculate_aggregate_emissions(all_data)
-aggregate_emissions_sample <- result$total_emissions_sample
+# Function to calculate the externalized cost to society of emissions
+calculate_external_cost <- function(total_emissions_kg, cost_per_ton_co2e) {
+  total_emissions_ton <- total_emissions_kg / 1000 # Convert kg to tons
+  external_cost <- total_emissions_ton * cost_per_ton_co2e
+  return(external_cost)
+}
+
+# Step 1: Calculate aggregates (total emissions, total kilometers, sample size) with the allocation factor for flights
+result <- calculate_aggregates(all_data, allocation_factor = allocation_factor)
+total_emissions_sample <- result$total_emissions_sample
+total_km_sample <- result$total_km_sample
 sample_size <- result$sample_size
 
-# Print the results for the sample
-print(paste("Sample Size:", sample_size))
-print(aggregate_emissions_sample)
+# Step 2: Calculate average emissions per person and per kilometer
+average_emissions <- calculate_average_emissions(total_emissions_sample, sample_size, total_km_sample)
+avg_emissions_per_person <- average_emissions$avg_emissions_per_person
+emissions_per_km <- average_emissions$emissions_per_km
 
-# Save the aggregate emissions and sample size to a file
-write.csv(aggregate_emissions_sample, "output/aggregate_emissions_sample.csv", row.names = FALSE)
-write.csv(data.frame(Sample_Size = sample_size), "output/sample_size.csv", row.names = FALSE)
+# Step 3: Extrapolate total emissions for the full audience
+num_concerts_surveyed <- 2 # Number of concerts surveyed
+num_concerts_total <- 10 # Total number of concerts in the season
+total_emissions_extrapolated <- extrapolate_total_emissions(avg_emissions_per_person, total_audience_size) / num_concerts_surveyed
+total_emissions_extrapolated_concert_series <- total_emissions_extrapolated * num_concerts_total # Extrapolate for the whole season (10 events)
 
-# Step 2: Extrapolate total emissions
-total_emissions <- extrapolate_total_emissions(aggregate_emissions_sample, sample_size, total_audience_size)
+# Step 4: Calculate externalized cost for the extrapolated emissions
+external_cost <- calculate_external_cost(total_emissions_extrapolated_concert_series, cost_per_ton_co2e)
 
-# Print the extrapolated total emissions
-print(paste("Extrapolated Total Emissions for", total_audience_size, "visitors:", total_emissions))
+# Output the results
+cat("Extrapolated Total Emissions for", total_audience_size / 2, "visitors:", round(total_emissions_extrapolated / 1000, 2), "t CO2e\n")
+cat("Extrapolated Total Emissions for whole season (10 events):", round(total_emissions_extrapolated_concert_series / 1000, 2), "t CO2e\n")
+cat("Average Emissions per Person (kg CO2e):", round(avg_emissions_per_person, 2), "\n")
+cat("Emissions per Kilometer (kg CO2e):", round(emissions_per_km, 4), "\n")
+cat("Externalized Cost to Society for the extrapolated emissions (EUR):", round(external_cost, 2), "EUR\n")
 
-# Save the total emissions to a file
-write.csv(data.frame(Total_Emissions = total_emissions), "output/total_emissions_extrapolated.csv", row.names = FALSE)
-
-# Step 3: Calculate the average emissions per person
-average_emissions_per_person <- calculate_average_emissions_per_person(total_emissions, total_audience_size)
-
-# Print the average emissions per person
-print(paste("Average Emissions per Person (kg CO2e):", average_emissions_per_person))
-
-# Save the average emissions per person to a file
-write.csv(data.frame(Average_Emissions_Per_Person = average_emissions_per_person), "output/average_emissions_per_person.csv", row.names = FALSE)
+# Step 5: Save the results to files
+write.csv(data.frame(Extrapolated_Total_Emissions_t_CO2e = total_emissions_extrapolated / 1000), "output/extrapolated_total_emissions.csv", row.names = FALSE)
+write.csv(data.frame(External_Cost_EUR = external_cost), "output/external_cost.csv", row.names = FALSE)
