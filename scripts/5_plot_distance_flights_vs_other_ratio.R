@@ -11,8 +11,8 @@ bucketize_distance <- function(total_distance, n_buckets = 50) {
 # Function to determine the main means of transportation
 determine_main_transport <- function(data) {
   main_transport <- data %>%
-    group_by(`Participant Identifier`, `Means of transportation`) %>%
-    summarize(Total_Distance_Mode = sum(`Distance (single journey, km)`, na.rm = TRUE), .groups = 'drop') %>%
+    group_by(`Participant Identifier`, `Itinerary Means of transportation`) %>%
+    summarize(Total_Distance_Mode = sum(`Itinerary Distance (single journey, km)`, na.rm = TRUE), .groups = 'drop') %>%
     group_by(`Participant Identifier`) %>%
     slice_max(Total_Distance_Mode, with_ties = FALSE) %>%
     ungroup()
@@ -35,13 +35,13 @@ process_transport_data <- function(data, n_buckets = 50) {
   
   # Bucketize the single journey distance
   main_transport <- main_transport %>%
-    left_join(data %>% select(`Participant Identifier`, `Distance (single journey, km)`, weight), by = "Participant Identifier") %>%
-    mutate(Distance_Bucket = bucketize_distance(`Distance (single journey, km)`, n_buckets))
+    left_join(data %>% select(`Participant Identifier`, `Itinerary Distance (single journey, km)`, weight), by = "Participant Identifier") %>%
+    mutate(Distance_Bucket = bucketize_distance(`Itinerary Distance (single journey, km)`, n_buckets))
   
   # Filter out any NAs in Distance_Bucket and ensure only main transport modes are kept
   main_transport <- main_transport %>%
     filter(!is.na(Distance_Bucket)) %>%
-    mutate(Transport_Group = sapply(`Means of transportation`, group_transport_modes)) %>%
+    mutate(Transport_Group = sapply(`Itinerary Means of transportation`, group_transport_modes)) %>%
     filter(!is.na(Transport_Group))  # Exclude any NA groups
   
   # Create a full combination of Distance_Bucket and Transport_Group to ensure all combinations are present
