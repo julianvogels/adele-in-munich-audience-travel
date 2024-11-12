@@ -20,7 +20,7 @@ process_modal_split_data <- function(data) {
         mutate(Percentage = (Total_Distance / Total_Distance_All) * 100) %>%
         ungroup() %>%
         select(-Total_Distance_All) %>%
-        filter(`Itinerary Means of transportation` != "Andere") %>% # Exclude "Andere"
+        filter(`Itinerary Means of transportation` != translations["Other"]) %>% # Exclude "Other"
         arrange(Percentage)
 
     # Ensure factor levels are unique and set them to match the sorted data

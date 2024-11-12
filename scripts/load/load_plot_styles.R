@@ -30,6 +30,16 @@ custom_colors <- c(
   ripeMango500 = "#F8E5E5",
   capri500 = "#CEEDFF",
   juneBud500 = "#F3F8EE",
+  grayMinus500 = "#272728",
+  grayMinus400 = "#3A3A3B",
+  grayMinus300 = "#4D4D4F",
+  grayMinus200 = "#606062",
+  grayMinus100 = "#737376",
+  gray = "#86868A",
+  gray100 = "#98989D",
+  gray200 = "#ABABB1",
+  gray300 = "#BEBEC4",
+  gray400 = "#D1D1D8",
   gray500 = "#E4E4EB"
 )
 
@@ -61,11 +71,13 @@ transport_mode_colors <- c(
   "walking" = "#D0E59E", # juneBud200,
   "Car" = "#6077FA", # lightBlue for display name
   "Flight" = "#FF4400", # tangelo for display name
-  "Long Distance Train" = "#FDA333", # ripeMango for display name
-  "Regional Train" = "#00B9FF", # capri for display name
-  "Urban Train" = "#B0D45D", # juneBud for display name
-  "Public Transport Bus Local" = "#FD6833", # tangelo100 for display name
-  "Public Transport Bus" = "#29C4FF", # lightBlue100 for display name
+  "Long distance train" = "#FDA333", # ripeMango for display name
+  "Regional train" = "#00B9FF", # capri for display name
+  "Urban train" = "#B0D45D", # juneBud for display name
+  "Public transport tus local" = "#FD6833", # tangelo100 for display name
+  "Public transport bus" = "#29C4FF", # lightBlue100 for display name
+  "Bus local" = "#FD6833", # tangelo100 for display name
+  "Long distance bus" = "#29C4FF", # lightBlue100 for display name
   "Cycling" = "#C0DD7D", # juneBud100 for display name
   "Taxi" = "#FDC833", # ripeMango100 for display name
   "Tram" = "#29C4FF", # capri100 for display name
@@ -90,11 +102,11 @@ transport_mode_colors <- c(
 )
 
 transport_group_colors <- c(
-  "Motorized Private Transport" = "#6077FA", # lightBlue
-  "Public Transport" = "#FDA333", # ripeMango
-  "Non-Motorized Private Transport" = "#B0D45D", # juneBud
+  "Motorized private transport" = "#6077FA", # lightBlue
+  "Public transport" = "#FDA333", # ripeMango
+  "Non-motorized private transport" = "#B0D45D", # juneBud
   "Flights" = "#FF4400", # tangelo
-  "Other Transport Modes" = "#00B9FF", # capri
+  "Other transport modes" = "#00B9FF", # capri
   "Motorisierter Individualverkehr" = "#6077FA", # lightBlue
   "Öffentlicher Verkehr" = "#FDA333", # ripeMango
   "Nicht-motorisierter Individualverkehr" = "#B0D45D", # juneBud
@@ -105,33 +117,33 @@ transport_group_colors <- c(
 # Function to map raw transport modes to display names
 map_transport_mode <- function(mode) {
   switch(mode,
-    "automobile" = "Auto",
-    "flight" = "Flug",
-    "trainLongDistance" = "Fernzug",
-    "trainRegional" = "Regionalzug",
-    "trainUrban" = "S-/U-Bahn",
-    "busLocal" = "ÖPNV-Linienbus",
-    "busLongDistance" = "Fernbus",
-    "cycling" = "Fahrrad",
-    "taxi" = "Taxi",
-    "tram" = "Straßenbahn",
-    "ferry" = "Fähre",
-    "pedelec" = "E-Bike",
-    "walking" = "Zu Fuß",
-    "Andere"
+    "automobile" = translations["Car"],
+    "flight" = translations["Flight"],
+    "trainLongDistance" = translations["Long distance train"],
+    "trainRegional" = translations["Regional train"],
+    "trainUrban" = translations["Urban train"],
+    "busLocal" = translations["Bus local"],
+    "busLongDistance" = translations["Long distance bus"],
+    "cycling" = translations["Cycling"],
+    "taxi" = translations["Taxi"],
+    "tram" = translations["Street car"],
+    "ferry" = translations["Ferry"],
+    "pedelec" = translations["Pedelec"],
+    "walking" = translations["Walking"],
+    translations["Other"]
   )
 }
 
 # Function to group transportation modes into categories
 group_transport_modes <- function(mode) {
   if (mode %in% c("automobile", "motorbike", "motorScooterTwoStroke", "motorScooterElectric", "taxi")) {
-    return("Motorisierter Individualverkehr")
+    return(translations["Motorized private transport"])
   } else if (mode %in% c("busLongDistance", "busLocal", "trainLongDistance", "trainRegional", "trainUrban", "tram", "ferry")) {
-    return("Öffentlicher Verkehr")
+    return(translations["Public transport"])
   } else if (mode %in% c("pedelec", "walking", "cycling")) {
-    return("Nicht-motorisierter Individualverkehr")
+    return(translations["Non-motorized private transport"])
   } else if (mode %in% c("flight")) {
-    return("Flüge")
+    return(translations["Flights"])
   } else {
     return(NA)
   }

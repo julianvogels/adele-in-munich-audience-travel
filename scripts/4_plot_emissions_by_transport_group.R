@@ -6,7 +6,7 @@ process_emissions_data <- function(data) {
   emissions_data <- data %>%
     mutate(Transport_Group = sapply(`Itinerary Means of transportation`, group_transport_modes)) %>%
     filter(!is.na(Transport_Group)) %>% # Remove NA values
-    filter(Transport_Group != "Non-Motorized Private Transport") %>% # Exclude non-motorized transport
+    filter(Transport_Group != "Non-motorized private transport") %>% # Exclude non-motorized transport
     group_by(Transport_Group) %>%
     summarize(Total_Emissions = sum(`Itinerary Emissions (single journey, kg CO2e)` * weight, na.rm = TRUE)) %>%
     ungroup() %>%

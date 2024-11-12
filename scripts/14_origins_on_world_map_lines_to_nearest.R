@@ -84,7 +84,7 @@ p <- ggplot() +
 # Add the map to the base plot
 base_map_messy <- p + geom_polygon(
     data = plotted_map, aes(x = long, y = lat, group = group),
-    colour = custom_colors["lightBlue100"], fill = custom_colors["lightBlue200"]
+    colour = custom_colors["gray400"], fill = custom_colors["gray500"]
 )
 
 # Strip the map down so it looks clean

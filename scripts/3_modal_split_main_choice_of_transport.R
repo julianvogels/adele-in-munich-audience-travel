@@ -33,9 +33,9 @@ process_modal_split_data <- function(data) {
     select(-Total_Count) %>%
     mutate(`Itinerary Means of transportation` = sapply(`Itinerary Means of transportation`, map_transport_mode)) # Apply custom labels
 
-  # Combine categories with <1% into "Andere"
+  # Combine categories with <1% into "other"
   modal_split_data <- modal_split_data %>%
-    mutate(`Itinerary Means of transportation` = ifelse(Percentage < other_threshold, "Andere", `Itinerary Means of transportation`)) %>%
+    mutate(`Itinerary Means of transportation` = ifelse(Percentage < other_threshold, translations["Other"], `Itinerary Means of transportation`)) %>%
     group_by(Location, `Itinerary Means of transportation`) %>%
     summarize(Percentage = sum(Percentage), .groups = "drop") %>%
     ungroup()
@@ -46,7 +46,7 @@ process_modal_split_data <- function(data) {
 # Process modal split data
 modal_split_data <- process_modal_split_data(all_data)
 
-# Reorder the levels of Means of transportation based on the highest to lowest percentage, with "Andere" at the end
+# Reorder the levels of Means of transportation based on the highest to lowest percentage, with "other" at the end
 modal_split_data <- modal_split_data %>%
   mutate(`Itinerary Means of transportation` = factor(`Itinerary Means of transportation`,
     levels = c(
@@ -55,13 +55,13 @@ modal_split_data <- modal_split_data %>%
         summarize(Total = sum(Percentage)) %>%
         arrange(desc(Total)) %>%
         pull(`Itinerary Means of transportation`) %>%
-        setdiff("Andere"),
-      "Andere"
+        setdiff(translations["Other"]),
+      translations["Other"]
     )
   ))
 
 # Filter out any labels with Percentage <= 1%
-modal_split_data_filtered <- modal_split_data %>% filter(Percentage > other_threshold | `Itinerary Means of transportation` == "Andere")
+modal_split_data_filtered <- modal_split_data %>% filter(Percentage > other_threshold | `Itinerary Means of transportation` == translations["Other"])
 
 # Plot modal split comparison using facets
 plot <- ggplot(modal_split_data, aes(x = "", y = Percentage, fill = `Itinerary Means of transportation`)) +
@@ -96,5 +96,5 @@ plot <- ggplot(modal_split_data, aes(x = "", y = Percentage, fill = `Itinerary M
   )
 
 # Save and print the plot
-ggsave("output/modal_split_main_transport_with_Andere_plot.png", plot, width = 10, height = 6)
+ggsave("output/modal_split_main_transport_with_other_plot.png", plot, width = 10, height = 6)
 print(plot)

@@ -23,7 +23,7 @@ process_modal_split_data <- function(data) {
 
   # Combine categories with <1% into "Other"
   modal_split_data <- modal_split_data %>%
-    mutate(`Itinerary Means of transportation` = ifelse(Percentage < other_threshold, "Andere", `Itinerary Means of transportation`)) %>%
+    mutate(`Itinerary Means of transportation` = ifelse(Percentage < other_threshold, translations["Other"], `Itinerary Means of transportation`)) %>%
     group_by(Location, `Itinerary Means of transportation`) %>%
     summarize(Percentage = sum(Percentage), .groups = "drop") %>%
     ungroup()
@@ -45,7 +45,7 @@ modal_split_data <- modal_split_data %>%
   ))
 
 # Filter out any labels with Percentage <= 1%
-modal_split_data_filtered <- modal_split_data %>% filter(Percentage > other_threshold | `Itinerary Means of transportation` == "Andere")
+modal_split_data_filtered <- modal_split_data %>% filter(Percentage > other_threshold | `Itinerary Means of transportation` == translations["Other"])
 
 # Plot modal split comparison using facets
 plot <- ggplot(modal_split_data, aes(x = "", y = Percentage, fill = `Itinerary Means of transportation`)) +

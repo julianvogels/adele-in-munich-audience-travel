@@ -22,7 +22,7 @@ process_modal_split_data_no_weights <- function(data) {
 
   # Combine categories with <1% into "Other"
   modal_split_data <- modal_split_data %>%
-    mutate(`Itinerary Means of transportation` = ifelse(Percentage < other_threshold, "Other", `Itinerary Means of transportation`)) %>%
+    mutate(`Itinerary Means of transportation` = ifelse(Percentage < other_threshold, translations["Other"], `Itinerary Means of transportation`)) %>%
     group_by(Location, `Itinerary Means of transportation`) %>%
     summarize(Percentage = sum(Percentage), .groups = "drop") %>%
     ungroup()
@@ -45,7 +45,7 @@ process_modal_split_data_with_weights <- function(data) {
 
   # Combine categories with <1% into "Other"
   modal_split_data <- modal_split_data %>%
-    mutate(`Itinerary Means of transportation` = ifelse(Percentage < other_threshold, "Other", `Itinerary Means of transportation`)) %>%
+    mutate(`Itinerary Means of transportation` = ifelse(Percentage < other_threshold, translations["Other"], `Itinerary Means of transportation`)) %>%
     group_by(Location, `Itinerary Means of transportation`) %>%
     summarize(Percentage = sum(Percentage), .groups = "drop") %>%
     ungroup()
@@ -80,10 +80,10 @@ modal_split_data_with_weights <- modal_split_data_with_weights %>%
 
 # Filter out any labels with Percentage <= 1% for both datasets
 modal_split_data_filtered_no_weights <- modal_split_data_no_weights %>%
-  filter(Percentage > other_threshold | `Itinerary Means of transportation` == "Other")
+  filter(Percentage > other_threshold | `Itinerary Means of transportation` == translations["Other"])
 
 modal_split_data_filtered_with_weights <- modal_split_data_with_weights %>%
-  filter(Percentage > other_threshold | `Itinerary Means of transportation` == "Other")
+  filter(Percentage > other_threshold | `Itinerary Means of transportation` == translations["Other"])
 
 # Plot modal split comparison without weights
 plot_no_weights <- ggplot(modal_split_data_no_weights, aes(x = "", y = Percentage, fill = `Itinerary Means of transportation`)) +
