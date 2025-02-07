@@ -45,6 +45,7 @@ load_and_analyze_sample_size <- function(file_path, location, population, e = 0.
 sample_size_analysis <- lapply(files_and_metadata, function(fl) {
   load_and_analyze_sample_size(fl$file_path, fl$location, fl$population)
 })
+print(sample_size_analysis)
 
 # Display sample size analysis results
 sample_size_analysis_df <- bind_rows(sample_size_analysis)

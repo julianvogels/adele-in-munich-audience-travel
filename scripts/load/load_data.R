@@ -41,32 +41,32 @@ population <- 148000
 groups <- list(
   friday = list(
     name = "Friday Concert",
-    user_weight_absolute = 74000,
+    strata_size_absolute = 74000,
     surveys = list(
       entrance_1 = list(
         name = "Adele Mobilitätsbefragung Publikum Eingang 1 Fr., 9. August",
-        user_weight_absolute = 65 / 95,
+        strata_size_absolute = 65 / 95,
         sample_size = 541
       ),
       entrance_2 = list(
         name = "Adele Mobiliätsbefragung Publikum Eingang 2 Fr. 9. August",
-        user_weight_absolute = 30 / 95,
+        strata_size_absolute = 30 / 95,
         sample_size = 203
       )
     )
   ),
   saturday = list(
     name = "Saturday Concert",
-    user_weight_absolute = 74000,
+    strata_size_absolute = 74000,
     surveys = list(
       entrance_1 = list(
         name = "Adele Mobilitätsbefragung Publikum Eingang 1 Sa., 10. August",
-        user_weight_absolute = 65 / 95,
+        strata_size_absolute = 65 / 95,
         sample_size = 520
       ),
       entrance_2 = list(
         name = "Adele Mobilitätsbefragung Publikum Eingang 2 Sa., 10 August",
-        user_weight_absolute = 30 / 95,
+        strata_size_absolute = 30 / 95,
         sample_size = 220
       )
     )
@@ -74,28 +74,68 @@ groups <- list(
 )
 
 # get total group weights
-groups_total_user_weight_absolute <- sum(sapply(groups, function(group) group$user_weight_absolute))
-groups_mean_user_weight_absolute <- groups_total_user_weight_absolute / length(groups)
+groups_total_strata_size_absolute <- sum(sapply(groups, function(group) group$strata_size_absolute))
+groups_mean_strata_size_absolute <- groups_total_strata_size_absolute / length(groups)
 
 # Adjusted weight calculation to incorporate sample size
 # Add normalised group weight to each group
 for (group_name in names(groups)) {
+  # Get the current group and calculate its normalised user weight relative to the group mean user weight
   group <- groups[[group_name]]
-  group$user_weight_normalised <- groups[[group_name]]$user_weight_absolute / groups_mean_user_weight_absolute
+  group$strata_size_normalised <- group$strata_size_absolute / groups_mean_strata_size_absolute
 
-  # Add normalised survey weight to each survey, adjusted by sample size
+  # Get the surveys within this group
   surveys <- group$surveys
-  total_user_weight_absolute <- sum(unlist(lapply(surveys, function(survey) if (!is.null(survey$user_weight_absolute)) survey$user_weight_absolute else 0)))
-  num_weighted_surveys <- sum(sapply(surveys, function(survey) !is.null(survey$user_weight_absolute) && survey$user_weight_absolute > 0))
 
+  # Calculate the total user weight for all surveys in this group to normalise individual survey weights
+  num_weighted_surveys <- sum(sapply(surveys, function(survey) {
+    !is.null(survey$strata_size_absolute) && survey$strata_size_absolute > 0
+  }))
+
+  total_strata_size_weighted_surveys <- sum(unlist(lapply(surveys, function(survey) {
+    if (!is.null(survey$strata_size_absolute)) survey$strata_size_absolute else 0
+  })))
+  mean_strata_size_weighted_surveys <- total_strata_size_weighted_surveys / num_weighted_surveys
+
+  # Calculate the average sample size across all surveys in this group
+  total_sample_size_weighted_surveys <- sum(sapply(surveys, function(survey) {
+    if (!is.null(survey$strata_size_absolute)) survey$sample_size else 0
+  }))
+  mean_sample_size_weighted_surveys <- total_sample_size_weighted_surveys / num_weighted_surveys
+
+  # Process each survey within the group to apply composite weighting
   groups[[group_name]]$surveys <- lapply(surveys, function(survey) {
-    if (!is.null(survey$user_weight_absolute) && !is.null(survey$sample_size)) {
-      # Calculate adjusted survey weight considering both user weight and sample size
-      survey$user_weight_normalised <- (survey$user_weight_absolute / total_user_weight_absolute) * num_weighted_surveys
-      survey$sample_adjusted_weight <- survey$user_weight_normalised * (survey$sample_size / sum(sapply(surveys, function(s) s$sample_size)))
-      survey$normalised_weight_product <- survey$sample_adjusted_weight * group$user_weight_normalised
+    # Check that both user weight and sample size are defined for this survey
+    if (!is.null(survey$strata_size_absolute) && !is.null(survey$sample_size)) {
+      strata_name <- survey$name
+
+      # The size of this subgroup of the population
+      strata_size <- survey$strata_size_absolute
+
+      # The percentage this subgroup of the population represents
+      strata_percentage <- strata_size / total_strata_size_weighted_surveys
+
+      # The size of the stratified sample for this subgroup (supposed to survey that many people to be representative)
+      strata_sample_size_goal <- total_sample_size_weighted_surveys * strata_percentage
+
+      # The actual sample size of this subgroup (how many people were actually surveyed)
+      strata_sample_size_actual <- survey$sample_size
+
+      # The equalisation factor to make the sample size representative of the subgroup
+      strata_weight <- strata_sample_size_goal / strata_sample_size_actual
+
+      print("")
+      print(paste("strata_name: ", strata_name))
+      print(paste("strata_size: ", strata_size))
+      print(paste("strata_percentage: ", sprintf("%.1f %%", strata_percentage * 100)))
+      print(paste("strata_sample_size_goal: ", strata_sample_size_goal))
+      print(paste("strata_sample_size_actual: ", strata_sample_size_actual))
+      print(paste("strata_weight: ", strata_weight))
+
+      survey$normalised_weight_product <- strata_weight * group$strata_size_normalised
     } else {
-      survey$normalised_weight_product <- group$user_weight_normalised
+      # If user weight or sample size is missing, fallback to the group's normalised weight
+      survey$normalised_weight_product <- group$strata_size_normalised
     }
     return(survey)
   })
@@ -107,9 +147,9 @@ survey_weights_tibbles <- function(surveys, group_weight) {
     tibble(
       name = unlist(lapply(surveys, function(survey) survey$name)),
       weight = unlist(lapply(surveys, function(survey) {
-        if (!is.null(survey$user_weight_normalised)) {
+        if (!is.null(survey$strata_size_normalised)) {
           # Normalised weight is known: multiply with group weight
-          return(survey$user_weight_normalised * group_weight)
+          return(survey$strata_size_normalised * group_weight)
         } else {
           # Weight is not set, use just group weight
           return(group_weight)
